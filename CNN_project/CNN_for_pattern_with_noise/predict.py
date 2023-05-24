@@ -138,7 +138,7 @@ for i, class_name in enumerate(class_names):
     precision = tp[i] / (tp[i] + fp[i]) if tp[i] + fp[i] != 0 else 0
     Z1_score = 2 * (precision * recall) / (precision + recall) if precision + recall != 0 else 0
     
-    print(f"召回率（{class_name}）: {recall}")
-    print(f"精确度（{class_name}）: {precision}")
+    print(f"Recall（{class_name}）: {recall}")
+    print(f"Precision（{class_name}）: {precision}")
     print(f"Z1 score（{class_name}）: {Z1_score}")
 
