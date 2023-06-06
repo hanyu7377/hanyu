@@ -44,8 +44,8 @@ def adv(element):
            d.plot_rank("2nd",i,y[i])            
         if width[i] == sort_width[-3]:
            d.make_img(img="pokemon figure/"+(df['pokemon'][i]) + '.png',zoom =0.12, x= x[i], y = 20)
-           d.plot_bar(x[i],y[i],width[i],color[1])   
-           d.plot_rank("2nd",i,y[i])                   
+           d.plot_bar(x[i],y[i],width[i],color[2])   
+           d.plot_rank("3rd",i,y[i])                   
         if width[i] < sort_width[-3]:
            d.make_img(img= "pokemon figure/"+(df['pokemon'][i]) + '.png',zoom =0.12, x= x[i], y = 20)
            d.plot_bar(x[i],y[i],width[i],color[3])    
