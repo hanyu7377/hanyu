@@ -1,0 +1,150 @@
+# -*- coding: utf-8 -*-
+"""
+Spyder Editor
+
+This is a temporary script file.
+"""
+
+import pandas as pd
+import numpy as np
+import math
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from sklearn.linear_model import LinearRegression
+# 生成5000組隨機的初速度和拋射仰角
+initial_velocities = np.round(np.random.uniform(10, 100, 5000), 1)
+launch_angles = np.round(np.random.uniform(1, 70, 5000), 1)
+
+# 計算最大高度和最大水平距離
+g = 9.8  # m/s^2
+max_heights = (initial_velocities**2 * np.sin(np.radians(launch_angles))**2) / (2 * g)
+max_distances = (initial_velocities**2 * np.sin(2 * np.radians(launch_angles))) / g
+
+# 創建DataFrame
+df = pd.DataFrame({
+    '初速度': initial_velocities,
+    '仰角': launch_angles,
+    '最大高度': max_heights,
+    '最大水平距離': max_distances
+})
+
+# 繪製散點圖
+
+#plt.scatter(df['初速度'], df['仰角'], s=10, alpha=0.5)
+#plt.title('Velocity vs Angle')
+#plt.xlabel('Velocity')
+#plt.ylabel('Angle')
+#plt.grid(True)
+#plt.show()
+#plt.close()
+
+
+X = df[['初速度', '仰角']].values
+y = df[['最大高度', '最大水平距離']].values
+
+# 標準化特徵
+#scaler = StandardScaler()
+#X_scaled = scaler.fit_transform(X)
+
+# 分割訓練集、驗證集和測試集
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+X_val, X_test, y_val, y_test = train_test_split(X_test, y_test, test_size=0.5, random_state=42)
+
+# 定義模型
+model = Sequential([
+    Dense(128, activation='relu', input_shape=(2,)),
+    Dense(64, activation='relu'),
+    Dense(32, activation='relu'),
+    Dense(16, activation='relu'),
+    Dense(8, activation='relu'),
+    Dense(2)
+])
+
+# 編譯模型
+model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mae'])
+
+# 訓練模型
+history = model.fit(X_train, y_train, epochs=28, batch_size=32, validation_data=(X_val, y_val), verbose=1)
+
+# 評估模型
+test_loss, test_mae = model.evaluate(X_test, y_test)
+print(f"測試集上的損失: {test_loss}")
+print(f"測試集上的平均絕對誤差: {test_mae}")
+
+
+history = model.fit(X_train, y_train, epochs=16, batch_size=32, validation_data=(X_val, y_val), verbose=1)
+
+# 繪製訓練和驗證集的損失
+plt.plot(history.history['loss'], label='train loss')
+plt.plot(history.history['val_loss'], label='validation loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.title('train and validation loss')
+plt.legend()
+plt.show()
+plt.close()
+model.save(r'C:\Users\hanyu\Desktop\ANN_reverse\model.h5')
+y_pred = model.predict(X_test)
+
+# 创建线性回归模型
+regression = LinearRegression()
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
+
+# 绘制最大高度的散点图
+ax1.scatter(y_test[:, 0], y_pred[:, 0], color='blue', label='Max Height')
+ax1.set_xlabel('Real Value')
+ax1.set_ylabel('Predicted Value')
+ax1.set_title('Predicted vs Real (Max Height)')
+ax1.legend()
+
+# 对最大高度进行线性回归拟合并绘制拟合线
+regression.fit(y_test[:, 0].reshape(-1, 1), y_pred[:, 0])
+height_coef = regression.coef_[0]
+height_intercept = regression.intercept_
+ax1.plot(y_test[:, 0], height_coef * y_test[:, 0] + height_intercept, color='cyan', label=f'Fit Line (Coefficient: {height_coef:.2f})')
+ax1.legend()
+
+# 绘制最大水平距离的散点图
+ax2.scatter(y_test[:, 1], y_pred[:, 1], color='red', label='Max Distance')
+ax2.set_xlabel('Real Value')
+ax2.set_ylabel('Predicted Value')
+ax2.set_title('Predicted vs Real (Max Distance)')
+ax2.legend()
+
+# 对最大水平距离进行线性回归拟合并绘制拟合线
+regression.fit(y_test[:, 1].reshape(-1, 1), y_pred[:, 1])
+distance_coef = regression.coef_[0]
+distance_intercept = regression.intercept_
+ax2.plot(y_test[:, 1], distance_coef * y_test[:, 1] + distance_intercept, color='orange', label=f'Fit Line (Coefficient: {distance_coef:.2f})')
+ax2.legend()
+
+plt.tight_layout()
+plt.show()
+
+
+
+
+
+
+
+################
+################這邊給output 並希望模型吐出對應的初速度和角度
+from tensorflow.keras.models import load_model
+loaded_model = load_model(r'C:\Users\hanyu\Desktop\ANN_reverse\model.h5')
+
+# 使用模型进行预测
+input_data = np.array([[34.6, 56.7]])  # 输入最大高度和最大距离
+predicted_values = loaded_model.predict(input_data)  # 预测初速度和发射角度
+
+# 输出预测结果
+predicted_height = predicted_values[0][0]
+predicted_distance = predicted_values[0][1]
+
+
+
+print("Predicted Initial Velocity:", predicted_height)
+print("Predicted Launch Angle:", predicted_distance)
