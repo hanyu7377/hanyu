@@ -1,0 +1,101 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import os 
+####plot decoration
+class plot_setting():
+    def border_setting(self,width):
+        ax = plt.gca()
+        ax.spines['top'].set_linewidth(width)
+        ax.spines['right'].set_linewidth(width)
+        ax.spines['bottom'].set_linewidth(width)
+        ax.spines['left'].set_linewidth(width)
+        ax.xaxis.set_tick_params(width = width)
+        ax.yaxis.set_tick_params(width = width)
+    def title_setting(self,title):
+        plt.title(title, fontsize = 60)
+    def ticks_label_setting(self,labelsize):
+        plt.tick_params(axis='both', labelsize = labelsize)
+    def ticks_setting(self):
+        plt.xticks([95, 125, 135, 145, 147], rotation=90)
+     
+        plt.yticks()
+    def label_setting(self,xlabel,ylabel,title):
+        plt.xlabel(xlabel,fontsize = 16)
+        plt.ylabel(ylabel,fontsize = 16)
+        plt.title(title,fontsize = 24 , x = 0.5, y = 1.1)
+    def xylim(self,xl,xh,yl,yh):
+        plt.xlim(xl,xh)
+        plt.ylim(yl,yh)
+    def add_text(self,x,y,string):
+        plt.text(x, y, string , ha='center', va='bottom')
+plot_setting = plot_setting()  
+
+
+directory = 'C:\\Users\\HANYUHSIAO\\Desktop\\有用的東西\\CMP thk radius plotting'
+
+
+
+####讀取所有CSV檔案
+csv_files = [file for file in os.listdir(directory) if file.endswith('.csv')]
+csv_files = csv_files[:-1]
+print("全部的lot有:    ")
+print(csv_files)
+
+
+####先得到半徑資訊
+df = pd.read_csv("position.csv")
+radius = ((df["Wafer X"] / 1000) ** 2 + (df["Wafer Y"] / 1000) ** 2) ** 0.5
+for i in range(len(csv_files)):
+    # 讀取想要的分析的lot
+    file_name = csv_files[i]
+    first_df = pd.read_csv(file_name)
+    # 使用布林索引來篩選包含特定關鍵字的資料
+    key_word = "BIAS@R_1_1"
+    first_df = first_df[first_df["Item"].str.contains(key_word)]
+    first_df = first_df[:-2]
+    
+    # 將 "Value" 欄位轉換為浮點數型態
+    first_df["Value"] = pd.to_numeric(first_df["Value"], errors="coerce")
+    
+    print("                 ")
+    first_df = first_df.dropna(subset=["Value"])
+    print(str(file_name[0:9]) + " 這批lot中Wafer有:    ")
+    legends = first_df["Wafer ID"].unique().tolist()
+    
+    legends = [legend.replace('00',file_name[7:9]) for legend in legends]
+    site_number = len(radius)
+    uplimit = 800
+    target = 500
+    lolimit = 300
+    data = []
+    print(legends)
+    for i in range(0, len(first_df), site_number):
+        group = first_df.iloc[i:i + site_number]
+    
+        group_data = group["Value"].to_numpy()  # 轉換為 Numpy 陣列
+        plt.scatter(radius, group_data, label=legends[i // site_number], marker="o")  # 使用 plot 函數
+        group_data = []
+    
+    
+    
+    
+    plot_setting.xylim(95,150,0,1000)
+    plot_setting.border_setting(2)
+    plot_setting.ticks_setting()
+    ####改x,y label 和title
+    plot_setting.label_setting("Radius (mm)",
+                               "BIAS (A)",
+                               file_name[:9]+ " V31 W CMP OX BIAS")
+    plot_setting.ticks_label_setting(12)
+    plot_setting.add_text(110, 0, "Z4")
+    plot_setting.add_text(130, 0, "Z3")
+    plot_setting.add_text(140, 0, "Z2")
+    plot_setting.add_text(146, 0, "Z1")
+    plt.axhline(y=uplimit, color="red", linestyle="--", label="Upper Limit")
+    plt.axhline(y=target, color="red", linestyle="-", label="target")
+    plt.axhline(y=lolimit, color="red", linestyle="--", label="Lower Limit")
+    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+    
+    plt.show()
+
+
