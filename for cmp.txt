@@ -1,101 +1,240 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Jul 28 19:20:13 2024
+
+@author: hanyu
+"""
+import os
+import tkinter as tk
+from tkinter import filedialog, messagebox, ttk
 import pandas as pd
 import matplotlib.pyplot as plt
-import os 
-####plot decoration
-class plot_setting():
-    def border_setting(self,width):
-        ax = plt.gca()
-        ax.spines['top'].set_linewidth(width)
-        ax.spines['right'].set_linewidth(width)
-        ax.spines['bottom'].set_linewidth(width)
-        ax.spines['left'].set_linewidth(width)
-        ax.xaxis.set_tick_params(width = width)
-        ax.yaxis.set_tick_params(width = width)
-    def title_setting(self,title):
-        plt.title(title, fontsize = 60)
-    def ticks_label_setting(self,labelsize):
-        plt.tick_params(axis='both', labelsize = labelsize)
-    def ticks_setting(self):
-        plt.xticks([95, 125, 135, 145, 147], rotation=90)
-     
-        plt.yticks()
-    def label_setting(self,xlabel,ylabel,title):
-        plt.xlabel(xlabel,fontsize = 16)
-        plt.ylabel(ylabel,fontsize = 16)
-        plt.title(title,fontsize = 24 , x = 0.5, y = 1.1)
-    def xylim(self,xl,xh,yl,yh):
-        plt.xlim(xl,xh)
-        plt.ylim(yl,yh)
-    def add_text(self,x,y,string):
-        plt.text(x, y, string , ha='center', va='bottom')
-plot_setting = plot_setting()  
+import math
+from tkinterdnd2 import DND_FILES, TkinterDnD
 
+print("Starting the application...")
+tkdnd_path = r'C:\Users\hanyu\AppData\Local\Programs\Python\Python39\tcl\tkdnd2.8'
+os.environ['TKDND_LIBRARY'] = tkdnd_path
 
-directory = 'C:\\Users\\HANYUHSIAO\\Desktop\\¦³¥ÎªºªF¦è\\CMP thk radius plotting'
+# åˆ›å»ºä¸»çª—å£
+root = TkinterDnD.Tk()
+root.title("Data Analysis Application")
 
+# ä¿å­˜Yè½´æ•°æ®ã€æ ‡ç­¾å’Œä¸Šä¸‹é™
+saved_y_data = None
+saved_y_label = None
+saved_upper_limit = None
+saved_lower_limit = None
 
+def analyze_OCD():
+    # åˆ›å»ºOCDåˆ†æçª—å£
+    global ocd_window
+    ocd_window = tk.Toplevel(root)
+    ocd_window.title("OCD Analysis")
+    ocd_window.geometry("600x600")
 
-####Åª¨ú©Ò¦³CSVÀÉ®×
-csv_files = [file for file in os.listdir(directory) if file.endswith('.csv')]
-csv_files = csv_files[:-1]
-print("¥ş³¡ªºlot¦³:    ")
-print(csv_files)
+    # åˆ›å»ºç½‘æ ¼å¸ƒå±€
+    ocd_window.grid_rowconfigure(0, weight=1)
+    ocd_window.grid_rowconfigure(1, weight=1)
+    ocd_window.grid_rowconfigure(2, weight=1)
+    ocd_window.grid_rowconfigure(3, weight=1)
+    ocd_window.grid_rowconfigure(4, weight=1)
+    ocd_window.grid_rowconfigure(5, weight=1)
+    ocd_window.grid_rowconfigure(6, weight=1)
+    ocd_window.grid_rowconfigure(7, weight=1)
+    ocd_window.grid_columnconfigure(0, weight=1)
+    ocd_window.grid_columnconfigure(1, weight=1)
+    ocd_window.grid_columnconfigure(2, weight=1)
+    ocd_window.grid_columnconfigure(3, weight=1)
+    ocd_window.grid_columnconfigure(4, weight=1)
+    ocd_window.grid_columnconfigure(5, weight=1)
 
+    # æ‹–æ”¾åŒºåŸŸ
+    drop_area = tk.Label(ocd_window, text="Drop Area", bg="lightgray", width=30, height=6)
+    drop_area.grid(row=0, column=0, columnspan=2, padx=10, pady=10)
 
-####¥ı±o¨ì¥b®|¸ê°T
-df = pd.read_csv("position.csv")
-radius = ((df["Wafer X"] / 1000) ** 2 + (df["Wafer Y"] / 1000) ** 2) ** 0.5
-for i in range(len(csv_files)):
-    # Åª¨ú·Q­nªº¤ÀªRªºlot
-    file_name = csv_files[i]
-    first_df = pd.read_csv(file_name)
-    # ¨Ï¥Î¥¬ªL¯Á¤Ş¨Ó¿z¿ï¥]§t¯S©wÃöÁä¦rªº¸ê®Æ
-    key_word = "BIAS@R_1_1"
-    first_df = first_df[first_df["Item"].str.contains(key_word)]
-    first_df = first_df[:-2]
+    label = tk.Label(ocd_window, text="Drag and Drop Excel File Here", font=("Arial", 10))
+    label.grid(row=0, column=0, columnspan=2, padx=10, pady=5)
+
+    drop_area.drop_target_register(DND_FILES)
+    drop_area.dnd_bind('<<Drop>>', lambda event: drop(event, ocd_window))
+
+    # é€‰æ‹©æ§½ä½
+    slot_label = tk.Label(ocd_window, text="Select Slots", font=("Arial", 14))
+    slot_label.grid(row=1, column=0, padx=10, pady=10, sticky='w')
+
+    global slot_listbox
+    slot_listbox = tk.Listbox(ocd_window, selectmode=tk.MULTIPLE, width=5, height=3)
+    slot_listbox.grid(row=2, column=0, padx=10, pady=5, sticky='nsew')
+
+    select_all_button = tk.Button(ocd_window, text="Select All", command=lambda: select_all_slots(slot_listbox))
+    select_all_button.grid(row=3, column=0, padx=10, pady=5, sticky='ew')
+
+    deselect_all_button = tk.Button(ocd_window, text="Deselect All", command=lambda: deselect_all_slots(slot_listbox))
+    deselect_all_button.grid(row=4, column=0, padx=10, pady=5, sticky='ew')
+
+    # Yè½´æ•°æ®å’Œæ ‡ç­¾é€‰æ‹©
+    y_label = tk.Label(ocd_window, text="Select Y Axis Data (film)", font=("Arial", 10))
+    y_label.grid(row=1, column=3, padx=10, pady=5, sticky='w')
+
+    y_options = ["T1", "T2", "T3", "T4"]
+    global y_combobox
+    y_combobox = ttk.Combobox(ocd_window, values=y_options)
+    y_combobox.grid(row=1, column=5, padx=10, pady=5)
+
+    label_label = tk.Label(ocd_window, text="Select Y Label", font=("Arial", 10))
+    label_label.grid(row=2, column=3, padx=10, pady=5, sticky='w')
+
+    label_options = ["Bias (Ã…)", "THK (Ã…)"]
+    global label_combobox
+    label_combobox = ttk.Combobox(ocd_window, values=label_options)
+    label_combobox.grid(row=2, column=5, padx=10, pady=5)
+
+    # ä¸Šä¸‹é™é€‰æ‹©
+    upper_limit_label = tk.Label(ocd_window, text="Upper Limit", font=("Arial", 12))
+    upper_limit_label.grid(row=3, column=3, padx=10, pady=5, sticky='w')
+    global upper_limit_entry
+    upper_limit_entry = tk.Entry(ocd_window)
+    upper_limit_entry.grid(row=3, column=5, padx=10, pady=5)
+
+    lower_limit_label = tk.Label(ocd_window, text="Lower Limit", font=("Arial", 12))
+    lower_limit_label.grid(row=4, column=3, padx=10, pady=5, sticky='w')
+    global lower_limit_entry
+    lower_limit_entry = tk.Entry(ocd_window)
+    lower_limit_entry.grid(row=4, column=5, padx=10, pady=5)
+
+    # å›¾è¡¨æ ‡é¢˜è¾“å…¥æ¡†
+    title_label = tk.Label(ocd_window, text="Plot Title", font=("Arial", 10))
+    title_label.grid(row=0, column=3, padx=10, pady=5, sticky='w')
+
+    global title_entry
+    title_entry = tk.Entry(ocd_window)
+    title_entry.grid(row=0, column=5, padx=10, pady=5, columnspan=2)
+
+    # æŒ‰é’®
+    button_frame = tk.Frame(ocd_window)
+    button_frame.grid(row=6, column=1, columnspan=3, padx=10, pady=10)
+
+    plot_button = tk.Button(button_frame, text="Plot", command=lambda: plot_data())
+    plot_button.pack(side=tk.LEFT, padx=5)
+
+    back_button = tk.Button(button_frame, text="Back", command=ocd_window.destroy)
+    back_button.pack(side=tk.RIGHT, padx=5)
+
+def drop(event, window):
+    print("File dropped.")
+    file_path = event.data.strip('{}')
+    print(f"Dropped file path: {file_path}")
+    if file_path:
+        process_file(file_path, window)
+
+def process_file(file_path, window):
+    try:
+        global df
+        df = pd.read_csv(file_path)
+        print(f"DataFrame columns: {df.columns}")
+        print(f"First few rows:\n{df.head()}")
+        slots = df["Slot #"].unique()
+        slot_listbox.delete(0, tk.END)  # æ¸…ç©ºåˆ—è¡¨æ¡†
+        for slot in slots:
+            slot_listbox.insert(tk.END, slot)
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to process file: {e}")
+
+def select_all_slots(listbox):
+    listbox.select_set(0, tk.END)
+
+def deselect_all_slots(listbox):
+    listbox.select_clear(0, tk.END)
+
+def plot_data():
+    selected_slots = [slot_listbox.get(i) for i in slot_listbox.curselection()]
+    if not selected_slots:
+        messagebox.showerror("Error", "No slots selected")
+        return
+
+    filtered_df = df[df["Slot #"].isin(selected_slots)]
+    if filtered_df.empty:
+        messagebox.showerror("Error", "No data for selected slots")
+        return
     
-    # ±N "Value" Äæ¦ìÂà´«¬°¯BÂI¼Æ«¬ºA
-    first_df["Value"] = pd.to_numeric(first_df["Value"], errors="coerce")
-    
-    print("                 ")
-    first_df = first_df.dropna(subset=["Value"])
-    print(str(file_name[0:9]) + " ³o§ålot¤¤Wafer¦³:    ")
-    legends = first_df["Wafer ID"].unique().tolist()
-    
-    legends = [legend.replace('00',file_name[7:9]) for legend in legends]
-    site_number = len(radius)
-    uplimit = 800
-    target = 500
-    lolimit = 300
-    data = []
-    print(legends)
-    for i in range(0, len(first_df), site_number):
-        group = first_df.iloc[i:i + site_number]
-    
-        group_data = group["Value"].to_numpy()  # Âà´«¬° Numpy °}¦C
-        plt.scatter(radius, group_data, label=legends[i // site_number], marker="o")  # ¨Ï¥Î plot ¨ç¼Æ
-        group_data = []
-    
-    
-    
-    
-    plot_setting.xylim(95,150,0,1000)
-    plot_setting.border_setting(2)
-    plot_setting.ticks_setting()
-    ####§ïx,y label ©Mtitle
-    plot_setting.label_setting("Radius (mm)",
-                               "BIAS (A)",
-                               file_name[:9]+ " V31 W CMP OX BIAS")
-    plot_setting.ticks_label_setting(12)
-    plot_setting.add_text(110, 0, "Z4")
-    plot_setting.add_text(130, 0, "Z3")
-    plot_setting.add_text(140, 0, "Z2")
-    plot_setting.add_text(146, 0, "Z1")
-    plt.axhline(y=uplimit, color="red", linestyle="--", label="Upper Limit")
-    plt.axhline(y=target, color="red", linestyle="-", label="target")
-    plt.axhline(y=lolimit, color="red", linestyle="--", label="Lower Limit")
-    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-    
+    y_data = y_combobox.get()
+    y_label = label_combobox.get()
+    plot_title = title_entry.get()
+    try:
+        upper_limit = float(upper_limit_entry.get())
+        lower_limit = float(lower_limit_entry.get())
+    except ValueError:
+        messagebox.showerror("Error", "Upper and Lower limits must be numbers")
+        return
+
+    global saved_y_data, saved_y_label, saved_upper_limit, saved_lower_limit
+    saved_y_data = y_data
+    saved_y_label = y_label
+    saved_upper_limit = upper_limit
+    saved_lower_limit = lower_limit
+
+    target = (upper_limit + lower_limit) / 2
+    dif = target - lower_limit
+
+    filtered_df['Radius (mm)'] = (filtered_df['X Location'] / 1000) ** 2 + (filtered_df['Y Location'] / 1000) ** 2
+    filtered_df['Radius (mm)'] = filtered_df['Radius (mm)'].apply(math.sqrt)
+
+    print(f"Filtered DataFrame after processing:\n{filtered_df.head()}")
+
+    plt.figure()
+
+    for slot in filtered_df['Slot #'].unique():
+        slot_data = filtered_df[filtered_df['Slot #'] == slot]
+        print(f"Plotting Slot {slot}: {slot_data.head()}")
+        plt.scatter(slot_data['Radius (mm)'], slot_data[y_data], label=f'Slot {slot}')
+
+    plt.axhline(y=upper_limit, color='r', linestyle='--', label='Upper Limit')
+    plt.axhline(y=lower_limit, color='r', linestyle='--', label='Lower Limit')
+    plt.axhline(y=target, color='r', linestyle='-', label='Target')
+
+    plt.xlabel("Radius (mm)", fontsize=20)
+    plt.ylabel(y_label, fontsize=20)
+    plt.title(plot_title if plot_title else f"Scatter Plot of {y_data} vs Radius", fontsize=28)
+    plt.ylim([lower_limit - dif, upper_limit + dif])
+    plt.legend()
     plt.show()
+
+    # ä¿æŒOCDåˆ†æçª—å£æ‰“å¼€
+    ocd_window.deiconify()
+
+def analyze_THM():
+    messagebox.showinfo("Info", "THM analysis selected")
+
+def analyze_Nova_CPP05():
+    messagebox.showinfo("Info", "Nova(CPP05) analysis selected")
+
+def analyze_Nova_CPO09_10():
+    messagebox.showinfo("Info", "Nova(CPO09, CPO10) analysis selected")
+
+def close_app():
+    root.destroy()
+# åˆ›å»ºæŒ‰é’®æ¡†æ¶
+frame = tk.Frame(root)
+frame.pack(pady=20)
+
+# åˆ›å»ºæŒ‰é’®
+button_OCD = tk.Button(frame, text="OCD", command=analyze_OCD, width=20)
+button_OCD.grid(row=0, column=0, padx=10, pady=10)
+
+button_THM = tk.Button(frame, text="THM", command=analyze_THM, width=20)
+button_THM.grid(row=0, column=1, padx=10, pady=10)
+
+button_Nova_CPP05 = tk.Button(frame, text="Nova(CPP05)", command=analyze_Nova_CPP05, width=20)
+button_Nova_CPP05.grid(row=1, column=0, padx=10, pady=10)
+
+button_Nova_CPO09_10 = tk.Button(frame, text="Nova(CPO09, CPO10)", command=analyze_Nova_CPO09_10, width=20)
+button_Nova_CPO09_10.grid(row=1, column=1, padx=10, pady=10)
+
+# åˆ›å»ºå…³é—­æŒ‰é’®
+button_exit = tk.Button(frame, text="Exit", command=close_app, width=20)
+button_exit.grid(row=2, column=0, columnspan=2, pady=20)
+
+root.mainloop()
 
 
